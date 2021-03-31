@@ -1298,7 +1298,9 @@ static void bulkio_server_single_read_write(void)
 	struct m0_bufvec *buf;
 
 	buf = &bp->bp_iobuf[0]->nb_buffer;
+	M0_LOG(M0_ALWAYS,"b seg_nr=%d", buf->ov_vec.v_nr);
 	for (j = 0; j < IO_SEGS_NR; ++j) {
+		M0_LOG(M0_ALWAYS,"b=%p l=%"PRIu64, buf->ov_buf[j], buf->ov_vec.v_count[j]);
 		memset(buf->ov_buf[j], 'b', IO_SEG_SIZE);
 	}
 	fol_check_enabled = true;

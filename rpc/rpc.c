@@ -71,6 +71,8 @@ M0_INTERNAL int m0_rpc_post(struct m0_rpc_item *item)
 	M0_PRE(m0_rpc_conn_is_snd(item2conn(item)));
 
 	machine = session_machine(item->ri_session);
+	// M0_LOG(M0_ALWAYS,"item_size=%"PRIu64" min_recv_size=%d",
+	// 	m0_rpc_item_size(item),machine->rm_min_recv_size);
 	M0_ASSERT(m0_rpc_item_size(item) <= machine->rm_min_recv_size);
 
 	m0_rpc_machine_lock(machine);
@@ -286,7 +288,7 @@ M0_INTERNAL m0_bcount_t m0_rpc_max_seg_size(struct m0_net_domain *ndom)
 	M0_PRE(ndom != NULL);
 
 	return min64u(m0_net_domain_get_max_buffer_segment_size(ndom),
-		      M0_RPC_DEF_MAX_RPC_MSG_SIZE);
+		      (M0_RPC_DEF_MAX_RPC_MSG_SIZE));
 }
 
 M0_INTERNAL uint32_t m0_rpc_max_segs_nr(struct m0_net_domain *ndom)
@@ -309,7 +311,8 @@ M0_INTERNAL m0_bcount_t m0_rpc_max_msg_size(struct m0_net_domain *ndom,
 	M0_PRE(ndom != NULL);
 
 	mbs = min64u(m0_net_domain_get_max_buffer_size(ndom),
-		     M0_RPC_DEF_MAX_RPC_MSG_SIZE);
+		     (M0_RPC_DEF_MAX_RPC_MSG_SIZE));
+	// M0_LOG(M0_ALWAYS,"rpc_size=%"PRIu64", mbs=%"PRIu64, rpc_size, mbs);
 	return rpc_size != 0 ? m0_clip64u(M0_SEG_SIZE, mbs, rpc_size) : mbs;
 }
 

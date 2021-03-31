@@ -38,11 +38,11 @@
 
 enum IO_UT_VALUES {
 	IO_FIDS_NR           = 2,
-#ifdef ENABLE_LIBFAB
-	IO_SEGS_NR           = 1,
-#else
-	IO_SEGS_NR           = 16,
-#endif
+// #ifdef ENABLE_LIBFAB
+// 	IO_SEGS_NR           = 1,
+// #else
+	IO_SEGS_NR           = 32,
+// #endif
 	IO_SEG_SIZE          = 4096,
 	IO_SEQ_LEN           = 8,
 	IO_FOPS_NR           = 16,

@@ -120,9 +120,11 @@ static int rpc_bulk_buf_init(struct m0_rpc_bulk_buf *rbuf, uint32_t segs_nr,
 		 * request could refer to smaller size. Hence initialize
 		 * the zero vector to get correct size of bulk transfer.
 		 */
+		// M0_LOG(M0_ALWAYS,"buf_init v_nr=%d",nb->nb_buffer.ov_vec.v_nr);
 		for (i = 0; i < segs_nr; ++i) {
 			cbuf.b_addr = nb->nb_buffer.ov_buf[i];
 			cbuf.b_nob = nb->nb_buffer.ov_vec.v_count[i];
+			// M0_LOG(M0_ALWAYS,"buf_init a=%p l=%"PRIu64,cbuf.b_addr, cbuf.b_nob);
 			rc = m0_0vec_cbuf_add(&rbuf->bb_zerovec, &cbuf, &index);
 			if (rc != 0) {
 				m0_0vec_fini(&rbuf->bb_zerovec);
@@ -310,6 +312,8 @@ M0_INTERNAL int m0_rpc_bulk_buf_add(struct m0_rpc_bulk *rbulk,
 	if (buf == NULL)
 		return M0_ERR(-ENOMEM);
 
+	// M0_LOG(M0_ALWAYS,"bulk buf add b=%p seg_nr=%d len=%"PRIu64,
+	// 	nb, segs_nr, length);
 	rc = rpc_bulk_buf_init(buf, segs_nr, length, nb);
 	if (rc != 0) {
 		m0_free(buf);
@@ -346,8 +350,10 @@ M0_INTERNAL int m0_rpc_bulk_buf_databuf_add(struct m0_rpc_bulk_buf *rbuf,
 	M0_PRE(netdom != NULL);
 
 	if (rbuf->bb_zerovec.z_count + count >
-	    m0_net_domain_get_max_buffer_size(netdom) ||
-	    count > m0_net_domain_get_max_buffer_segment_size(netdom)) {
+	//     m0_net_domain_get_max_buffer_size(netdom) ||
+	    m0_rpc_max_msg_size(netdom, 0) ||
+	//     count > m0_net_domain_get_max_buffer_segment_size(netdom)) {
+	    count > m0_rpc_max_seg_size(netdom)) {
 		M0_LOG(M0_DEBUG, "Cannot exceed net_dom_max_buf_segs");
 		return M0_RC(-EMSGSIZE); /* Not an error, no M0_ERR(). */
 	}

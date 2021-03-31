@@ -816,7 +816,7 @@ static int libfab_tm_res_init(struct m0_fab__tm *tm)
 	/* Initialise completion queues for tx */
 	cq_attr.wait_obj = FI_WAIT_FD;
 	cq_attr.format = FI_CQ_FORMAT_MSG;
-	cq_attr.size = fab->fab_fi->tx_attr->size;
+	cq_attr.size = 1024;//fab->fab_fi->tx_attr->size;
 	rc = fi_cq_open(fab->fab_dom, &cq_attr, &tm->ftm_tx_cq, NULL);
 	if (rc != FI_SUCCESS)
 		return M0_ERR(rc);
@@ -854,6 +854,7 @@ static int libfab_ep_txres_init(struct m0_fab__active_ep *aep,
 	/* Initialise and bind event queue */
 	memset(&eq_attr, 0, sizeof(eq_attr));
 	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.size = 8;
 	rc = fi_eq_open(fab->fab_fab, &eq_attr, &aep->aep_tx_res.ftr_eq, NULL);
 	if (rc != FI_SUCCESS)
 		return M0_RC(rc);
@@ -887,7 +888,7 @@ static int libfab_ep_rxres_init(struct m0_fab__active_ep *aep,
 	cq_attr.wait_obj = FI_WAIT_FD;
 	cq_attr.wait_cond = FI_CQ_COND_NONE;
 	cq_attr.format = FI_CQ_FORMAT_MSG;
-	cq_attr.size = fab->fab_fi->rx_attr->size;
+	cq_attr.size = 32;//fab->fab_fi->rx_attr->size;
 	rc = fi_cq_open(fab->fab_dom, &cq_attr, &aep->aep_rx_res.frr_cq, NULL);
 	if (rc != FI_SUCCESS)
 		return M0_RC(rc);
@@ -906,6 +907,7 @@ static int libfab_ep_rxres_init(struct m0_fab__active_ep *aep,
 	/* Initialise and bind event queue */
 	memset(&eq_attr, 0, sizeof(eq_attr));
 	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.size = 8;
 	rc = fi_eq_open(fab->fab_fab, &eq_attr, &aep->aep_rx_res.frr_eq, NULL);
 	if (rc != FI_SUCCESS)
 		return M0_RC(rc);
@@ -940,6 +942,7 @@ static int libfab_pep_res_init(struct m0_fab__passive_ep *pep,
 	/* Initialise and bind event queue */
 	memset(&eq_attr, 0, sizeof(eq_attr));
 	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.size = 256;
 	rc = fi_eq_open(tm->ftm_fab->fab_fab, &eq_attr, &pep->pep_res.fpr_eq,
 			NULL);
 	if (rc != FI_SUCCESS)
@@ -1821,7 +1824,7 @@ static int libfab_conn_init(struct m0_fab__ep *ep, struct m0_fab__tm *ma,
 		if (ret == FI_SUCCESS)
 			aep->aep_tx_state = FAB_CONNECTING;
 		else
-			M0_LOG(M0_ERROR, " Conn req failed ret=%d dst=%"PRIx64,
+			M0_LOG(M0_DEBUG, " Conn req failed ret=%d dst=%"PRIx64,
 			       ret, *(uint64_t*)peer_fi->dest_addr);
 		fi_freeinfo(peer_fi);
 	}
