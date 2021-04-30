@@ -236,6 +236,7 @@ static int libfab_ep_addr_decode_lnet(const char *name, char *node,
 		portal = 30 + portal;
 
 	portnum  = tmid | (1 << 10) | ((portal - 30) << 11);
+	M0_ASSERT(portnum < 65537);
 	sprintf(port, "%d", portnum);
 	fab_autotm[tmid] = 1;
 	return M0_RC(0);
@@ -513,7 +514,7 @@ static uint32_t libfab_handle_connect_request_events(struct m0_fab__tm *tm)
 
 	eq = tm->ftm_pep->fep_listen->pep_res.fpr_eq;
 	rc = fi_eq_read(eq, &event, &entry,
-			(sizeof(entry) + LIBFAB_ADDR_STRLEN_MAX), 0);
+			(sizeof(entry) + sizeof(struct m0_fab__conn_data)), 0);
 	if (rc >= sizeof(entry)) {
 		if (event == FI_CONNREQ) {
 			memset(&en, 0, sizeof(en));
@@ -740,6 +741,8 @@ static int libfab_ep_find(struct m0_net_transfer_mc *tm, const char *name,
 			rc = libfab_ep_create(tm, name, epn, epp);
 		else {
 			M0_ASSERT(epn != NULL);
+			M0_ASSERT((strlen(epn->fen_addr) + strlen(epn->fen_port) 
+				  + 8) < LIBFAB_ADDR_STRLEN_MAX);
 			sprintf(ep_str, "libfab:%s:%s", epn->fen_addr,
 				epn->fen_port);
 			rc = libfab_ep_create(tm, ep_str, epn, epp);
@@ -1845,6 +1848,7 @@ static void libfab_ep_ntop(uint64_t netaddr, struct m0_fab__ep_name *name)
 	ap.net_addr = netaddr;
 	inet_ntop(AF_INET, &ap.ap[1], name->fen_addr, LIBFAB_ADDR_LEN_MAX);
 	ap.ap[0] = ntohl(ap.ap[0]);
+	M0_ASSERT(ap.ap[0] < 65537);
 	sprintf(name->fen_port, "%d", ap.ap[0]);
 }
 
