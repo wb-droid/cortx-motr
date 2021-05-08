@@ -1523,7 +1523,11 @@ static void libfab_buf_complete(struct m0_fab__buf *buf, int32_t status)
 		.nbe_time   = m0_time_now()
 	};
 
-	M0_ENTRY("b=%p q=%d rc=%d", buf, buf->fb_nb->nb_qtype, status);
+	M0_ENTRY("fb=%p nb =%p q=%d rc=%d", buf, nb, buf->fb_nb->nb_qtype, status);
+
+	if ( status == -ETIMEDOUT)
+		M0_LOG(M0_ALWAYS, "Timeout fb=%p nb = %p q=%d", buf, nb, buf->fb_nb->nb_qtype);
+
 	if (M0_IN(nb->nb_qtype, (M0_NET_QT_MSG_RECV,
 				 M0_NET_QT_PASSIVE_BULK_RECV,
 				 M0_NET_QT_ACTIVE_BULK_RECV))) {
@@ -1540,8 +1544,8 @@ static void libfab_buf_complete(struct m0_fab__buf *buf, int32_t status)
 
 	libfab_buf_fini(buf);
 	M0_ASSERT(libfab_tm_invariant(ma));
-	libfab_tm_evpost_lock(ma);
 	libfab_tm_unlock(ma);
+	libfab_tm_evpost_lock(ma);
 	m0_net_buffer_event_post(&ev);
 	libfab_tm_lock(ma);
 	libfab_tm_evpost_unlock(ma);
@@ -1563,7 +1567,7 @@ static void libfab_buf_done(struct m0_fab__buf *buf, int rc)
 	uint64_t             *ptr;
 	int                   ret;
 
-	M0_ENTRY("b=%p rc=%d", buf, rc);
+	M0_ENTRY("fb=%p nb= %p rc=%d", buf, nb, rc);
 	M0_PRE(libfab_tm_is_locked(ma));
 	/*
 	 * Multiple libfab_buf_done() calls on the same buffer are possible if
@@ -2437,8 +2441,8 @@ static int libfab_ma_start(struct m0_net_transfer_mc *ntm, const char *name)
 	} else
 		rc = M0_ERR(-ENOMEM);
 
-	libfab_tm_evpost_lock(ftm);
 	libfab_tm_unlock(ftm);
+	libfab_tm_evpost_lock(ftm);
 	libfab_tm_event_post(ftm, M0_NET_TM_STARTED);
 	libfab_tm_lock(ftm);
 	libfab_tm_evpost_unlock(ftm);
