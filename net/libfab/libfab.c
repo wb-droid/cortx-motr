@@ -672,12 +672,13 @@ static void libfab_txep_comp_read(struct fid_cq *cq)
  */
 static void libfab_poller(struct m0_fab__tm *tm)
 {
-	struct m0_fab__ev_ctx    *ctx;
+	struct m0_net_end_point  *net;
+	// struct m0_fab__ev_ctx    *ctx;
 	struct m0_fab__ep        *xep;
 	struct m0_fab__active_ep *aep;
 	struct fid_cq            *cq;
-	struct epoll_event        ev;
-	int                       ev_cnt;
+	// struct epoll_event        ev;
+	// int                       ev_cnt;
 
 	/* Wait for the transfer machine to get started */
 	while (tm->ftm_state != FAB_TM_STARTED)
@@ -685,7 +686,10 @@ static void libfab_poller(struct m0_fab__tm *tm)
 	
 	while (tm->ftm_state != FAB_TM_SHUTDOWN) {
 		sched_yield();
-		ev_cnt = epoll_wait(tm->ftm_epfd, &ev, 1, FAB_WAIT_FD_TMOUT);
+		// ev_cnt = epoll_wait(tm->ftm_epfd, &ev, 1, FAB_WAIT_FD_TMOUT);
+		// if (ev_cnt == 0) {
+		// 	ev_cnt++;
+		// }
 
 		while (1) {
 			m0_mutex_lock(&tm->ftm_endlock);
@@ -710,23 +714,36 @@ static void libfab_poller(struct m0_fab__tm *tm)
 		
 		M0_ASSERT(libfab_tm_is_locked(tm) && libfab_tm_invariant(tm));
 
-		if (ev_cnt > 0) {
-			ctx = ev.data.ptr;
-			if (ctx->evctx_type == FAB_COMMON_Q_EVENT) {
-				/* Check the common queue of the
-				   transfer machine for events */
-				libfab_handle_connect_request_events(tm);
-				libfab_txep_comp_read(tm->ftm_tx_cq);
-			} else {
-				/* Check the private queue of the
-				   endpoint for events */
-				xep = ctx->evctx_ep;
-				aep = libfab_aep_get(xep);
+		libfab_handle_connect_request_events(tm);
+		libfab_txep_comp_read(tm->ftm_tx_cq);
+
+		m0_tl_for(m0_nep, &tm->ftm_ntm->ntm_end_points, net) {
+			xep = libfab_ep(net);
+			aep = libfab_aep_get(xep);
+			if (aep != NULL) {
 				libfab_txep_event_check(xep, aep, tm);
 				cq = aep->aep_rx_res.frr_cq;
 				libfab_rxep_comp_read(cq, xep);
 			}
-		}
+		} m0_tl_endfor;
+		
+		// if (ev_cnt > 0) {
+		// 	ctx = ev.data.ptr;
+		// 	if (ctx->evctx_type == FAB_COMMON_Q_EVENT) {
+		// 		/* Check the common queue of the
+		// 		   transfer machine for events */
+		// 		libfab_handle_connect_request_events(tm);
+		// 		libfab_txep_comp_read(tm->ftm_tx_cq);
+		// 	} else {
+		// 		/* Check the private queue of the
+		// 		   endpoint for events */
+		// 		xep = ctx->evctx_ep;
+		// 		aep = libfab_aep_get(xep);
+		// 		libfab_txep_event_check(xep, aep, tm);
+		// 		cq = aep->aep_rx_res.frr_cq;
+		// 		libfab_rxep_comp_read(cq, xep);
+		// 	}
+		// }
 
 		libfab_bulk_buf_process(tm);
 		libfab_tm_buf_timeout(tm);
@@ -896,7 +913,7 @@ static int libfab_tm_res_init(struct m0_fab__tm *tm)
 	pep = tm->ftm_pep->fep_listen;
 	fab = tm->ftm_fab;
 	/* Initialise completion queues for tx */
-	cq_attr.wait_obj = FI_WAIT_FD;
+	cq_attr.wait_obj = FI_WAIT_UNSPEC;//FI_WAIT_FD;
 	cq_attr.format = FI_CQ_FORMAT_DATA;
 	cq_attr.size = FAB_MAX_TX_CQ_EV;
 	rc = fi_cq_open(fab->fab_dom, &cq_attr, &tm->ftm_tx_cq, NULL);
@@ -935,7 +952,7 @@ static int libfab_ep_txres_init(struct m0_fab__active_ep *aep,
 		return M0_RC(rc);
 
 	/* Initialise and bind event queue */
-	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.wait_obj = FI_WAIT_UNSPEC;//FI_WAIT_FD;
 	eq_attr.size = FAB_MAX_AEP_EQ_EV;
 	rc = fi_eq_open(fab->fab_fab, &eq_attr, &aep->aep_tx_res.ftr_eq, NULL);
 	if (rc != FI_SUCCESS)
@@ -968,7 +985,7 @@ static int libfab_ep_rxres_init(struct m0_fab__active_ep *aep,
 	fab = tm->ftm_fab;
 
 	/* Initialise and bind completion queues for rx */
-	cq_attr.wait_obj = FI_WAIT_FD;
+	cq_attr.wait_obj = FI_WAIT_UNSPEC;//FI_WAIT_FD;
 	cq_attr.wait_cond = FI_CQ_COND_NONE;
 	cq_attr.format = FI_CQ_FORMAT_DATA;
 	cq_attr.size = FAB_MAX_RX_CQ_EV;
@@ -991,7 +1008,7 @@ static int libfab_ep_rxres_init(struct m0_fab__active_ep *aep,
 		return M0_RC(rc);
 
 	/* Initialise and bind event queue */
-	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.wait_obj = FI_WAIT_UNSPEC;//FI_WAIT_FD;
 	eq_attr.size = FAB_MAX_AEP_EQ_EV;
 	rc = fi_eq_open(fab->fab_fab, &eq_attr, &aep->aep_rx_res.frr_eq, NULL);
 	if (rc != FI_SUCCESS)
@@ -1025,7 +1042,7 @@ static int libfab_pep_res_init(struct m0_fab__passive_ep *pep,
 	int               rc = 0;
 
 	/* Initialise and bind event queue */
-	eq_attr.wait_obj = FI_WAIT_FD;
+	eq_attr.wait_obj = FI_WAIT_UNSPEC;//FI_WAIT_FD;
 	eq_attr.size = FAB_MAX_PEP_EQ_EV;
 	rc = fi_eq_open(tm->ftm_fab->fab_fab, &eq_attr, &pep->pep_res.fpr_eq,
 			NULL);
@@ -2139,19 +2156,20 @@ static int libfab_txep_init(struct m0_fab__active_ep *aep,
  */
 static int libfab_waitfd_bind(struct fid* fid, struct m0_fab__tm *tm, void *ctx)
 {
-	struct epoll_event ev;
-	int                fd;
-	int                rc;
+	// struct epoll_event ev;
+	// int                fd;
+	// int                rc;
 
-	rc = fi_control(fid, FI_GETWAIT, &fd);
-	if (rc != FI_SUCCESS)
-		return M0_ERR(rc);
+	// rc = fi_control(fid, FI_GETWAIT, &fd);
+	// if (rc != FI_SUCCESS)
+	// 	return M0_ERR(rc);
 
-	ev.events = EPOLLIN;
-	ev.data.ptr = ctx;
-	rc = epoll_ctl(tm->ftm_epfd, EPOLL_CTL_ADD, fd, &ev);
+	// ev.events = EPOLLIN;
+	// ev.data.ptr = ctx;
+	// rc = epoll_ctl(tm->ftm_epfd, EPOLL_CTL_ADD, fd, &ev);
 
-	return M0_RC(rc);
+	// return M0_RC(rc);
+	return 0;
 }
 
 /**
